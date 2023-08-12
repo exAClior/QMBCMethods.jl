@@ -1,4 +1,6 @@
 using MPSKitModels
+using MPSKit
+using TensorKit
 using Graphs
 using GraphPlot
 
@@ -80,10 +82,6 @@ function C60Graph()
     return g
 end
 
-
-
-
-
 function DualC60Graph(g)
     res = SimpleGraph(ne(g))  # creates the graph for dual lattice
     ve_dict = Dict{Tuple{Int,Int},Int}()  # stores the vertex type for each edge
@@ -93,7 +91,7 @@ function DualC60Graph(g)
         num_edg += 1
     end
 
-    for vtx in vertices(g)
+    for vtx in Graphs.vertices(g)
         edg_list = Int[]
         for v_nb in neighbors(g,vtx)
             v_tp = (min(vtx,v_nb),max(vtx,v_nb))
@@ -109,7 +107,11 @@ function DualC60Graph(g)
 end
 
 function make_nnham(g,J::Real)
-    ham = @mpoham sum(J*S_zz(){min(edg.src,edg.dst),max(edg.src,edg.dst)} for edg in collect(edges(g)))
+    ZZ= S_zz()
+    ham = @mpoham begin 
+        MPSKit.sum(ZZ(){edg.src,edg.dst} for edg in collect(edges(g)))
+    end
+    return ham
 end
 
 c60g = C60Graph()
@@ -117,4 +119,24 @@ gplot(c60g)
 dualc60g = DualC60Graph(c60g)
 gplot(dualc60g)
 
+
 make_nnham(dualc60g,1.0)
+    
+
+
+
+    ZZ = S_zz()
+    
+    lattice = InfiniteCylinder(5)
+    for (i,j) in nearest_neighbours(lattice)
+        println(i,j,typeof(i))
+
+    end
+    @mpoham begin
+        H = sum(ZZ{i,j} for (i,j) in nearest_neighbours(lattice))
+    end
+    @test length(H) == length(lattice)
+g = 1.0
+
+H_ising = @mpoham sum(S_xx(){i, i + 1} + g * S_z(){i} for i in -Inf:Inf)
+
